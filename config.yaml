@@ -1,0 +1,41 @@
+transform:
+  module: transform
+  name: Transform
+
+transform_dict:
+  blur: [3, 3]
+  rotate3D:
+    theta: [-20, 20]
+    phi: [-20, 20] 
+    gamma: [0, 0]
+    dx: 0
+    dy: 0
+    dz: 0
+  rotate2D:
+    angle: [-30, 30]
+    scale: [1.0, 1.0]
+  contrast: [-20, 20]
+  brightness: [-10, 10]
+  noisy: 0
+  flip: 0
+  ratio_hf_per_hb: [0.3, 0.8]
+
+mask_suffix:  '.png'
+image_suffix: '.jpg'
+suffixes: ['png', 'jpg', 'jpeg', 'JPEG']
+
+sample_per_background: 1
+foreground_path: 'test/foreground/data_cccd'
+background_path: 'test/background/'
+output_path: 'test/output/data_cccd'
+
+split_data:
+  train_set: 0.64
+  valid_set: 0.16
+  test_set: 0.2
+
+folder_path:
+  input_dir: 'test/output/data_cccd/'
+  train_dir: 'test/output/data_cccd/train/'
+  test_dir: 'test/output/data_cccd/test/'
+  valid_dir: 'test/output/data_cccd/valid/'
