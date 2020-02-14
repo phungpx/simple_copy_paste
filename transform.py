@@ -209,9 +209,3 @@ class Transform():
         cv2.normalize(noisy_image, noisy_image, 0, 255, cv2.NORM_MINMAX, dtype=-1)
         noisy_image = noisy_image.astype(np.uint8)
         return noisy_image
-
-    # @staticmethod
-    # def connect_component(self, image):
-    #     if len(image.shape) != 2:
-    #         image = cv2.cvtColor(image, cv2.GRAYSCALE)
-    #     return

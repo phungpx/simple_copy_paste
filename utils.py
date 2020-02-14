@@ -17,14 +17,3 @@ def create_instance(config, *args, **kwargs):
         if isinstance(value, str):
             config_kwargs[key] = eval(value)
     return getattr(import_module(module), name)(*args, **config_kwargs, **kwargs)
-
-# a = load_yaml('config.yaml')['transform']
-# transform = getattr(import_module(a['module']), a['name'])
-
-# config = load_yaml('config.yaml')
-# transform = create_instance(config['transform'])
-
-# image = cv2.imread('snowman.png')
-# image = transform.rotate3D(image, 10, 60, 60)
-# cv2.imwrite('snow.jpg', image)
-
