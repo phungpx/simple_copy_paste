@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 
+
 class Transform():
     """
         Define some transform function which use to augmentation data
@@ -11,13 +12,13 @@ class Transform():
         dim = None
         (h, w) = image.shape[:2]
         if width is None and height is None:
-            return image     
+            return image
         if width is None:
             dim = (int(w * height / float(h)), height)
         elif height is None:
             dim = (width, int(h * width / float(w)))
         else:
-            dim = (width, height)       
+            dim = (width, height)
         return cv2.resize(image, dim, interpolation=inter)
 
     @staticmethod
@@ -25,7 +26,7 @@ class Transform():
         '''Flip image
         Args:
             image:
-            mode:  
+            mode:
                 0  (vertical flip)
                 1  (horizontal flip)
                 -1 (vertical and horizontal flip)
@@ -37,7 +38,7 @@ class Transform():
         else:
             fliped = image
         return fliped
-    
+
     @staticmethod
     def translate(image, x, y):
         M = np.float32([[1, 0, x], [0, 1, y]])
@@ -76,51 +77,45 @@ class Transform():
             A rotated numpy array image
         """
         h, w = image.shape[:2]
-        
+
         gamma = gamma * np.pi / 180
         theta = theta * np.pi / 180
-        phi   = phi * np.pi / 180
+        phi = phi * np.pi / 180
 
         # get ideal focal length on z axis
         d = np.sqrt(h ** 2 + w ** 2)
-        focal = d / (2 * np.sin(gamma) if np.sin(gamma) != 0 else 1)# Oz axis scale (if < 0 is flip)
+        focal = d / (2 * np.sin(gamma) if np.sin(gamma) != 0 else 1)  # Oz axis scale (if < 0 is flip)
         dz = focal
 
-        A1 = np.array([
-                [1, 0, - w / 2],
-                [0, 1, - h / 2],
-                [0, 0, 1],
-                [0, 0, 1]], dtype = "float32")
+        A1 = np.array([[1, 0, - w / 2],
+                       [0, 1, - h / 2],
+                       [0, 0, 1],
+                       [0, 0, 1]], dtype="float32")
 
-        Rx = np.array([
-                [1, 0, 0, 0],
-                [0, np.cos(theta), - np.sin(theta), 0],
-                [0, np.sin(theta), np.cos(theta), 0],
-                [0, 0, 0, 1]], dtype = "float32")
+        Rx = np.array([[1, 0, 0, 0],
+                       [0, np.cos(theta), - np.sin(theta), 0],
+                       [0, np.sin(theta), np.cos(theta), 0],
+                       [0, 0, 0, 1]], dtype="float32")
 
-        Ry = np.array([
-                [np.cos(phi), 0, - np.sin(phi), 0],
-                [0, 1, 0 ,0],
-                [np.sin(phi), 0, np.cos(phi),0],
-                [0, 0, 0, 1]], dtype = "float32")
+        Ry = np.array([[np.cos(phi), 0, - np.sin(phi), 0],
+                       [0, 1, 0, 0],
+                       [np.sin(phi), 0, np.cos(phi), 0],
+                       [0, 0, 0, 1]], dtype="float32")
 
-        Rz = np.array([
-                [np.cos(gamma), - np.sin(gamma), 0, 0],
-                [np.sin(gamma), np.cos(gamma), 0, 0],
-                [0, 0, 1, 0],
-                [0, 0, 0, 1]], dtype = "float32")
+        Rz = np.array([[np.cos(gamma), - np.sin(gamma), 0, 0],
+                       [np.sin(gamma), np.cos(gamma), 0, 0],
+                       [0, 0, 1, 0],
+                       [0, 0, 0, 1]], dtype="float32")
 
         # Translation matrix
-        T = np.array([
-                [1, 0, 0, dx],
-                [0, 1, 0, dy],
-                [0, 0, 1, dz],
-                [0, 0, 0, 1]], dtype = "float32")
+        T = np.array([[1, 0, 0, dx],
+                      [0, 1, 0, dy],
+                      [0, 0, 1, dz],
+                      [0, 0, 0, 1]], dtype="float32")
 
-        A2 = np.array([
-                [focal, 0, w / 2, 0],
-                [0, focal, h / 2, 0],
-                [0, 0, 1, 0]], dtype = "float32")
+        A2 = np.array([[focal, 0, w / 2, 0],
+                       [0, focal, h / 2, 0],
+                       [0, 0, 1, 0]], dtype="float32")
 
         transfom = A2 @ (T @ ((Rx @ Ry @ Rz) @ A1))
         warped = cv2.warpPerspective(image, transfom, (w, h))

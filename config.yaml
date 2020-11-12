@@ -20,14 +20,14 @@ transform_dict:
   flip: 0
   ratio_hf_per_hb: [0.3, 0.8]
 
-mask_suffix:  '.png'
+mask_suffix: '.png'
 image_suffix: '.jpg'
 suffixes: ['png', 'jpg', 'jpeg', 'JPEG']
 
 sample_per_background: 1
-foreground_path: 'test/foreground/data_cccd'
-background_path: 'test/background/'
-output_path: 'test/output/data_cccd'
+foreground_path: 'sample/foreground/'
+background_path: 'sample/background/'
+output_path: 'sample/output/'
 
 split_data:
   train_set: 0.64
