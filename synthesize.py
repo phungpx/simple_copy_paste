@@ -1,5 +1,3 @@
-
-
 import cv2
 import yaml
 import json
@@ -32,8 +30,8 @@ def create_instance(config, *args, **kwargs):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='config.yaml')
-    parser.add_argument('--input-dir', type=str, default='./sample/fore_ground/')
-    parser.add_argument('--output-dir', type=str, default='./sample/copy_paste/')
+    parser.add_argument('--input-dir', type=str, default='./sample/foreground/')
+    parser.add_argument('--output-dir', type=str, default='./sample/synthesize/')
     parser.add_argument('--repeat', type=int, default=1)
     args = parser.parse_args()
 

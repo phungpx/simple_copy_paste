@@ -1,7 +1,7 @@
 module: simple_copy_paste
 name: SimpleCopyPaste
 SimpleCopyPaste:
-  background_dir: '''./sample/back_ground/'''
+  background_dir: '''./sample/background/'''
   template_ratio: 'random.uniform(0.4, 0.8)'
   template_type: '''CARD_BACK'''
   image_pattern: '''*.*'''
