@@ -12,8 +12,13 @@ __all__ = ['SimpleCopyPaste']
 class SimpleCopyPaste(BaseCopyPaste):
     def __init__(
         self,
-        background_dir, template_ratio, template_type=None,
-        image_pattern='*.*', transforms=None,
+        background_dir,
+        template_ratio,
+        template_type=None,
+        image_pattern='*.*',
+        background_transforms=None,
+        template_transforms=None,
+        final_transforms=None,
         *args, **kwargs
     ):
         '''
@@ -27,7 +32,9 @@ class SimpleCopyPaste(BaseCopyPaste):
         super(SimpleCopyPaste, self).__init__(*args, **kwargs)
         self.template_type = template_type
         self.template_ratio = template_ratio
-        self.transforms = transforms if transforms is not None else []
+        self.final_transforms = final_transforms if final_transforms is not None else []
+        self.template_transforms = template_transforms if template_transforms is not None else []
+        self.background_transforms = background_transforms if background_transforms is not None else []
 
         self.bg_images = list(Path(background_dir).glob(image_pattern))
 
@@ -40,10 +47,29 @@ class SimpleCopyPaste(BaseCopyPaste):
             image: combinated image between template and random background
             label: json label of template on random background
         '''
+
         image, label, mask, points = self.get_template_info(image, label, self.template_type)
 
         # choose back ground image randomly
         bg_image = cv2.imread(str(random.choice(self.bg_images)))
+
+        # augment background
+        for augmenter in random.sample(
+            self.background_transforms,
+            k=random.randint(0, len(self.background_transforms))
+        ):
+            bg_image = augmenter(image=bg_image)
+
+        # augment fore ground template image, teample mask, labeled points of teample
+        for augmenter in random.sample(
+            self.template_transforms,
+            k=random.randint(0, len(self.template_transforms))
+        ):
+            image, mask, points = augmenter(
+                image=image,
+                segmentation_maps=mask,
+                keypoints=points,
+            )
 
         # set ratio between fore ground and back ground
         height, width = image.shape[:2]
@@ -56,6 +82,7 @@ class SimpleCopyPaste(BaseCopyPaste):
             else:
                 width_new = min(bg_height, bg_width) * self.template_ratio
                 height_new = width_new * height / width
+
             # resize
             resize_to_size = iaa.Resize(
                 {
@@ -71,19 +98,6 @@ class SimpleCopyPaste(BaseCopyPaste):
         else:
             bg_width_new, bg_height_new = int(width / self.template_ratio), int(height / self.template_ratio)
             bg_image = iaa.CropToFixedSize(bg_width_new, bg_height_new)(image=bg_image)
-
-        # augment fore ground template image, teample mask, labeled points of teample
-        for augmenter in random.sample(self.transforms, k=random.randint(0, len(self.transforms))):
-            image, mask, points = augmenter(
-                image=image,
-                segmentation_maps=mask,
-                keypoints=points,
-            )
-
-            if isinstance(augmenter, iaa.PerspectiveTransform):
-                augmenter.keep_size = True
-                augmenter.fit_output = False
-                bg_image = augmenter(image=bg_image)
 
         # pad fore ground image, mask, labeled points to fix with back ground size
         pad_to_size = iaa.PadToFixedSize(
@@ -111,6 +125,10 @@ class SimpleCopyPaste(BaseCopyPaste):
         image = image.astype(np.uint8)
 
         # apply augmentaions for combinated image
-        image = iaa.ChangeColorTemperature(kelvin=11000)(image=image)
+        for augmenter in random.sample(
+            self.final_transforms,
+            k=random.randint(0, len(self.final_transforms))
+        ):
+            image = augmenter(image=image)
 
         return image, label

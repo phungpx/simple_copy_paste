@@ -24,11 +24,11 @@ class BaseCopyPaste(ABC):
 
         # get fore ground mask from getting region from label
         mask = self.get_template_mask(label, template_type) if template_type else np.ones_like(image)
-        mask = SegmentationMapsOnImage(mask, image.shape)
+        mask = SegmentationMapsOnImage(arr=mask, shape=image.shape)
 
         return image, label, mask, points
 
-    def get_template_mask(self, label, template_type: str):
+    def get_template_mask(self, label, template_type):
         height, width = label['imageHeight'], label['imageWidth']
         mask = np.zeros(shape=(height, width, 3), dtype=np.uint8)
         is_created = False
