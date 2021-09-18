@@ -83,7 +83,7 @@ class SimpleCopyPaste(BaseCopyPaste):
                 width_new = min(bg_height, bg_width) * self.template_ratio
                 height_new = width_new * height / width
 
-            # resize
+            # resize to appropriate size between foreground and background
             resize_to_size = iaa.Resize(
                 {
                     "height": int(height_new),
@@ -117,8 +117,8 @@ class SimpleCopyPaste(BaseCopyPaste):
 
         # blend fore ground mask with gaussian blur
         mask = mask.get_arr().astype(np.float32)
-        ksize = max(max(image.shape) // 400 * 2 + 1, 5)
-        mask = cv2.GaussianBlur(mask, ksize=(ksize, ksize), sigmaX=ksize)
+        k = max(max(image.shape) // 400 * 2 + 1, 5)
+        mask = cv2.GaussianBlur(mask, ksize=(k, k), sigmaX=k)
 
         # combinate fore ground and back ground with fore ground mask
         image = image * mask + bg_image * (1. - mask)
@@ -132,3 +132,52 @@ class SimpleCopyPaste(BaseCopyPaste):
             image = augmenter(image=image)
 
         return image, label
+
+    def gaussian_shadow(self, image, center=(-1, -1), r=-1):
+        '''
+        Args:
+            image: image: 1, H, W, 3, ndarray
+            center: (x,y); (-1,-1) for random
+            r: -1 for random
+        Outputs:
+            shadowed image
+        '''
+        x_center, y_enter = center
+        height, width = image.shape[:2]
+
+        if center == (-1, -1):
+            x_center = random.randint(0, width - 1)
+            y_center = random.randint(0, height - 1)
+        if r == -1:
+            r = random.randint(1000, 2000)
+
+        # Generate gaussian
+        sigma = r / 3.0
+        size = 2 * r
+        x = np.arange(0, size, 1, np.float32)
+        y = x[:, np.newaxis]
+        x0 = y0 = size // 2
+        # The gaussian is not normalized, we want the center value to equal 1
+        g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * sigma ** 2))
+
+        mask = np.zeros(shape=(height, width))
+        x_min = max(0, x_center - r)
+        x_max = min(width, x_center + r)
+        y_min = max(0, y_center - r)
+        y_max = min(height, y_center + r)
+
+        g_remain = g[(r - (y_center - y_min)):(r + (y_max - y_center)), (r - (x_center - x_min)):(r + (x_max - x_center))]
+
+        for i in range(x_min, x_max):
+            for j in range(y_min, y_max):
+                mask[j, i] = g_remain[j - y_min, i - x_min]
+
+        masks = np.stack([mask, mask, mask], axis=-1)
+        masks = np.expand_dims(masks, axis=0)
+
+        # do em agment trên ảnh scan nên em chỉ làm tối đi thôi.
+        bright_image = iaa.MultiplyAndAddToBrightness(mul=(0.6, 1.5), add=(-40, 40))(images=image)
+
+        image = bright_image * masks + image * (1 - masks)
+
+        return image.astype(np.uint8)

@@ -47,7 +47,7 @@ class BaseCopyPaste(ABC):
                 is_created = True
 
         if not is_created:
-            raise TypeError('label must be contained template label.')
+            raise TypeError(f'label must be contained template label {template_type}.')
 
         return mask
 
