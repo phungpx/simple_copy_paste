@@ -4,7 +4,7 @@ import numpy as np
 import imgaug.augmenters as iaa
 
 from pathlib import Path
-from .base_copy_paste import BaseCopyPaste
+from base_copy_paste import BaseCopyPaste
 
 __all__ = ['SimpleCopyPaste']
 
@@ -80,6 +80,11 @@ class SimpleCopyPaste(BaseCopyPaste):
                 keypoints=points,
             )
 
+            if isinstance(augmenter, iaa.PerspectiveTransform):
+                augmenter.keep_size = True
+                augmenter.fit_output = False
+                bg_image = augmenter(image=bg_image)
+
         # pad fore ground image, mask, labeled points to fix with back ground size
         pad_to_size = iaa.PadToFixedSize(
             width=bg_image.shape[1],
@@ -106,6 +111,6 @@ class SimpleCopyPaste(BaseCopyPaste):
         image = image.astype(np.uint8)
 
         # apply augmentaions for combinated image
-        # image = iaa.ChangeColorTemperature(kelvin=11000)(image=image)
+        image = iaa.ChangeColorTemperature(kelvin=11000)(image=image)
 
         return image, label

@@ -1,7 +1,6 @@
 import cv2
 import json
 import numpy as np
-from typing import Tuple
 from abc import ABC, abstractmethod
 from imgaug.augmentables import Keypoint
 from imgaug.augmentables import KeypointsOnImage
@@ -9,12 +8,12 @@ from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 
 class BaseCopyPaste(ABC):
-    def __call__(self, image, label, template_type):
-        image, label = self.apply(image, label, template_type)
+    def __call__(self, image, label):
+        image, label = self.apply(image, label)
         return image, label
 
     @abstractmethod
-    def apply(self, image, label, template_type=None):
+    def apply(self, image, label):
         pass
 
     def get_template_info(self, image, label, template_type=None):
@@ -31,7 +30,7 @@ class BaseCopyPaste(ABC):
 
     def get_template_mask(self, label, template_type: str):
         height, width = label['imageHeight'], label['imageWidth']
-        mask = np.zeros_like(shape=(height, width), dtype=np.uint8)
+        mask = np.zeros(shape=(height, width, 3), dtype=np.uint8)
         is_created = False
 
         for shape in label['shapes']:
@@ -43,7 +42,7 @@ class BaseCopyPaste(ABC):
                 else:
                     raise ValueError('type of label region must be rectangle or polygon.')
 
-                cv2.fillPoly(img=mask, pts=[np.int32(points)], color=1)
+                cv2.fillPoly(img=mask, pts=[np.int32(points)], color=(1, 1, 1))
 
                 is_created = True
 
@@ -100,3 +99,5 @@ def set_points(json_info, points):
     elif isinstance(json_info, list):
         for element in json_info:
             set_points(element, points)
+
+    return json_info
