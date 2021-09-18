@@ -10,37 +10,51 @@ __all__ = ['SimpleCopyPaste']
 
 
 class SimpleCopyPaste(BaseCopyPaste):
-    def __init__(self, bg_dir, fg_ratio, transforms, template_type, image_pattern='*.*', *args, **kwargs):
+    def __init__(
+        self,
+        background_dir, template_ratio, template_type=None,
+        image_pattern='*.*', transforms=None,
+        *args, **kwargs
+    ):
+        '''
+        Args:
+            background_dir: directory where storages all back ground images.
+            image_pattern: pattern of all background images.
+            template_ratio: ratio between template and background.
+            template_type: name of template. Ex: CARD_BACK, CMND_BACK, ...
+            transforms: all augmentations applied to template before attaching to background.
+        '''
         super(SimpleCopyPaste, self).__init__(*args, **kwargs)
-        self.bg_dir = bg_dir
-        self.fg_ratio = fg_ratio
-        self.transforms = transforms
         self.template_type = template_type
+        self.template_ratio = template_ratio
+        self.transforms = transforms if transforms is not None else []
 
-        self.bg_images = list(Path(bg_dir).glob(image_pattern))
+        self.bg_images = list(Path(background_dir).glob(image_pattern))
 
     def apply(self, image, label):
-        image, label, mask, points = self.get_template_info(image, label)
+        '''
+        Args:
+            image: template image
+            label: json path or json label of template
+        Outputs:
+            image: combinated image between template and random background
+            label: json label of template on random background
+        '''
+        image, label, mask, points = self.get_template_info(image, label, self.template_type)
 
         # choose back ground image randomly
-        height, width = image.shape[:2]
-        bg_image = random.choice(self.bg_images)
-        bg_image = cv2.imread(str(bg_image))
-        bg_image = self._resize(image=bg_image, min_size=min(width, height),
-                                max_size=max(width, height), resize_if_smaller=True)
-        bg_image = iaa.PadToFixedSize(width, height)(image=bg_image)
-        bg_image = iaa.CropToFixedSize(width, height)(image=bg_image)
+        bg_image = cv2.imread(str(random.choice(self.bg_images)))
 
         # set ratio between fore ground and back ground
         height, width = image.shape[:2]
         bg_height, bg_width = bg_image.shape[:2]
 
-        if max(height, width) > min(bg_height, bg_width) * self.fg_ratio:
+        if max(height, width) > min(bg_height, bg_width) * self.template_ratio:
             if height >= width:
-                height_new = min(bg_height, bg_width) * self.fg_ratio
+                height_new = min(bg_height, bg_width) * self.template_ratio
                 width_new = height_new * width / height
             else:
-                width_new = min(bg_height, bg_width) * self.fg_ratio
+                width_new = min(bg_height, bg_width) * self.template_ratio
                 height_new = width_new * height / width
             # resize
             resize_to_size = iaa.Resize(
@@ -55,11 +69,11 @@ class SimpleCopyPaste(BaseCopyPaste):
                 keypoints=points
             )
         else:
-            bg_width_new, bg_height_new = int(width / self.fg_ratio), int(height / self.fg_ratio)
+            bg_width_new, bg_height_new = int(width / self.template_ratio), int(height / self.template_ratio)
             bg_image = iaa.CropToFixedSize(bg_width_new, bg_height_new)(image=bg_image)
 
         # augment fore ground template image, teample mask, labeled points of teample
-        for augmenter in self.transforms:
+        for augmenter in random.sample(self.transforms, k=random.randint(0, len(self.transforms))):
             image, mask, points = augmenter(
                 image=image,
                 segmentation_maps=mask,
