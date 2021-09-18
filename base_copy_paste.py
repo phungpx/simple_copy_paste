@@ -17,9 +17,9 @@ class BaseCopyPaste(ABC):
     def apply(self, image, label, template_type=None):
         pass
 
-    def get_template(self, image, label, template_type=None) -> Tuple[np.ndarray, SegmentationMapsOnImage, KeypointsOnImage]:
+    def get_template_info(self, image, label, template_type=None):
         # get fore ground points from label
-        points = self.get_points(label)
+        points, label = self.get_points(label)
         points = [Keypoint(x=point[0], y=point[1]) for point in points]
         points = KeypointsOnImage(keypoints=points, shape=image.shape)
 
@@ -27,22 +27,14 @@ class BaseCopyPaste(ABC):
         mask = self.get_template_mask(label, template_type) if template_type else np.ones_like(image)
         mask = SegmentationMapsOnImage(mask, image.shape)
 
-        return image, mask, points
+        return image, label, mask, points
 
     def get_template_mask(self, label, template_type: str):
-        if isinstance(label, str):
-            with open(file=label, mode='r', encoding='utf-8') as f:
-                json_info = json.load(f)
-        elif isinstance(label, dict):
-            json_info = label
-        else:
-            raise TypeError('label must be str, dict.')
-
-        height, width = json_info['imageHeight'], json_info['imageWidth']
+        height, width = label['imageHeight'], label['imageWidth']
         mask = np.zeros_like(shape=(height, width), dtype=np.uint8)
         is_created = False
 
-        for shape in json_info['shapes']:
+        for shape in label['shapes']:
             if shape['label'] == template_type:
                 if shape['shape_type'] == 'rectangle':
                     points = self.to_4points(shape['points'])
@@ -63,17 +55,17 @@ class BaseCopyPaste(ABC):
     def get_points(self, label):
         if isinstance(label, str):
             with open(file=label, mode='r', encoding='utf-8') as f:
-                json_info = json.load(f)
+                label = json.load(f)
+            points = get_points(label)
         elif isinstance(label, dict):
-            json_info = label
+            points = get_points(label)
         else:
             raise TypeError('label must be str, dict.')
-        points = get_points(json_info)
-        return points, json_info
+        return points, label
 
-    def set_points(self, json_info, points):
-        json_info = set_points(json_info, points)
-        return json_info
+    def set_points(self, label, points):
+        label = set_points(label, points)
+        return label
 
     def to_4points(points):
         x1, y1 = points[0][0], points[0][1]
