@@ -1,0 +1,18 @@
+module: simple_copy_paste
+name: SimpleCopyPaste
+SimpleCopyPaste:
+  background_dir: '''./sample/back_ground/'''
+  template_ratio: 'random.uniform(0.4, 0.8)'
+  template_type: '''CARD_BACK'''
+  image_pattern: '''*.*'''
+  template_transforms:
+    - iaa.Affine(rotate=(-20, 20), shear=(-15, 15), fit_output=True)
+    - iaa.Rot90(k=[1, 2, 3], keep_size=False)
+    - iaa.PerspectiveTransform(scale=(0.01, 0.03), keep_size=False, fit_output=True)
+    - iaa.ElasticTransformation(alpha=(0, 0.5), sigma=0.25)
+  background_transforms:
+    - iaa.ElasticTransformation(alpha=(0.1, 0.5), sigma=0.25)
+    - iaa.ChangeColorTemperature(kelvin=(4000, 9000))
+  final_transforms:
+    - iaa.ElasticTransformation(alpha=(0.1, 0.5), sigma=0.25)
+    - iaa.ChangeColorTemperature(kelvin=(4000, 9000))
