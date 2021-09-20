@@ -66,7 +66,7 @@ class BaseCopyPaste(ABC):
         label = set_points(label, points)
         return label
 
-    def to_4points(points):
+    def to_4points(self, points):
         x1, y1 = points[0][0], points[0][1]
         x2, y2 = points[1][0], points[1][1]
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
