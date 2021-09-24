@@ -12,29 +12,27 @@ __all__ = ['SimpleCopyPaste']
 class SimpleCopyPaste(BaseCopyPaste):
     def __init__(
         self,
-        background_dir,
-        template_ratio,
-        template_type=None,
-        image_pattern='*.*',
-        background_transforms=None,
-        template_transforms=None,
-        final_transforms=None,
-        *args, **kwargs
+        background_dir,  # directory where storages all back ground images.
+        template_ratio,  # ratio between template and background.
+        template_type=None,  # name of template. Ex: CARD_BACK, CMND_BACK, ...
+        image_pattern='*.*',  # pattern of all background images.
+        bg_required_transforms=None,  # augmentations used for background.
+        bg_optional_transforms=None,  # augmentations used for background.
+        fg_required_transforms=None,  # augmentations used for template (foreground).
+        fg_optional_transforms=None,  # augmentations used for template (foreground).
+        output_required_transforms=None,  # do not use augmentations about geometric, size.
+        output_optional_transforms=None,  # do not use augmentations about geometric, size.
+        *args, **kwargs,
     ):
-        '''
-        Args:
-            background_dir: directory where storages all back ground images.
-            image_pattern: pattern of all background images.
-            template_ratio: ratio between template and background.
-            template_type: name of template. Ex: CARD_BACK, CMND_BACK, ...
-            transforms: all augmentations applied to template before attaching to background.
-        '''
         super(SimpleCopyPaste, self).__init__(*args, **kwargs)
         self.template_type = template_type
         self.template_ratio = template_ratio
-        self.final_transforms = final_transforms if final_transforms is not None else []
-        self.template_transforms = template_transforms if template_transforms is not None else []
-        self.background_transforms = background_transforms if background_transforms is not None else []
+        self.fg_optional_transforms = fg_optional_transforms if fg_optional_transforms is not None else []
+        self.fg_required_transforms = fg_required_transforms if fg_required_transforms is not None else []
+        self.bg_optional_transforms = bg_optional_transforms if bg_optional_transforms is not None else []
+        self.bg_required_transforms = bg_required_transforms if bg_required_transforms is not None else []
+        self.output_optional_transforms = output_optional_transforms if output_optional_transforms is not None else []
+        self.output_required_transforms = output_required_transforms if output_required_transforms is not None else []
 
         self.bg_images = list(Path(background_dir).glob(image_pattern))
 
@@ -53,17 +51,35 @@ class SimpleCopyPaste(BaseCopyPaste):
         # choose back ground image randomly
         bg_image = cv2.imread(str(random.choice(self.bg_images)))
 
-        # augment background
+        # required augmentations for background
         for augmenter in random.sample(
-            self.background_transforms,
-            k=random.randint(0, len(self.background_transforms))
+            self.bg_required_transforms,
+            k=len(self.bg_required_transforms)
         ):
             bg_image = augmenter(image=bg_image)
 
-        # augment fore ground template image, teample mask, labeled points of teample
+        # optional augmentions for background
         for augmenter in random.sample(
-            self.template_transforms,
-            k=random.randint(0, len(self.template_transforms))
+            self.bg_optional_transforms,
+            k=random.randint(0, len(self.bg_optional_transforms))
+        ):
+            bg_image = augmenter(image=bg_image)
+
+        # required augmentations for foreground image, mask, labeled points of teample
+        for augmenter in random.sample(
+            self.fg_required_transforms,
+            k=len(self.fg_required_transforms)
+        ):
+            image, mask, points = augmenter(
+                image=image,
+                segmentation_maps=mask,
+                keypoints=points,
+            )
+
+        # optional augmentations for foreground image, mask, labeled points of teample
+        for augmenter in random.sample(
+            self.fg_optional_transforms,
+            k=random.randint(0, len(self.fg_optional_transforms))
         ):
             image, mask, points = augmenter(
                 image=image,
@@ -92,10 +108,16 @@ class SimpleCopyPaste(BaseCopyPaste):
             )
         else:
             w, h = width / self.template_ratio, height / self.template_ratio
-            bg_image = iaa.CropToFixedSize(width=int(round(w)), height=int(round(h)))(image=bg_image)
+            bg_image = iaa.CropToFixedSize(
+                width=int(round(w)),
+                height=int(round(h))
+            )(image=bg_image)
 
         # pad foreground image, mask, labeled points to fix with background size
-        pad_to_size = iaa.PadToFixedSize(width=bg_image.shape[1], height=bg_image.shape[0])
+        pad_to_size = iaa.PadToFixedSize(
+            width=bg_image.shape[1],
+            height=bg_image.shape[0]
+        )
         image, mask, points = pad_to_size(
             image=image,
             segmentation_maps=mask,
@@ -116,10 +138,21 @@ class SimpleCopyPaste(BaseCopyPaste):
         image = image * mask + bg_image * (1. - mask)
         image = image.astype(np.uint8)
 
-        # apply augmentaions for combinated image
+        # required augmentaions for combinated image,
+        # just uses augmentations about color, blur, blend, contrast, ...
+        # do not use augmentations about gemetric, size.
         for augmenter in random.sample(
-            self.final_transforms,
-            k=random.randint(0, len(self.final_transforms))
+            self.output_optional_transforms,
+            k=random.randint(0, len(self.output_optional_transforms))
+        ):
+            image = augmenter(image=image)
+
+        # optional augmentaions for combinated image,
+        # just uses augmentations about color, blur, blend, contrast, ...
+        # do not use augmentations about gemetric, size.
+        for augmenter in random.sample(
+            self.output_optional_transforms,
+            k=random.randint(0, len(self.output_optional_transforms))
         ):
             image = augmenter(image=image)
 
